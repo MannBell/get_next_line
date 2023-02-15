@@ -5,93 +5,35 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: abelayad <abelayad@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/11/08 18:47:35 by abelayad          #+#    #+#             */
-/*   Updated: 2022/11/10 15:23:37 by abelayad         ###   ########.fr       */
+/*   Created: 2023/02/12 23:07:42 by abelayad          #+#    #+#             */
+/*   Updated: 2023/02/15 20:24:17 by abelayad         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-int	_contains_nl(const char *str)
-{
-	while (*str++)
-		if (*(str - 1) == '\n')
-			return (1);
-	return (0);
-}
-
-/*
-types:
-  1: get the first line
-  0: get what is after the first line
-*/
-char	*_get_line(char *stash, int first_line)
-{
-	int		i;
-	char	*ptr2free;
-
-	i = 0;
-	while (stash[i] != '\n')
-		++i;
-	if (first_line)
-		return (ft_substr(stash, 0, i + 1));
-	ptr2free = stash;
-	stash = ft_substr(stash, i + 1, ft_strlen(stash) - (i + 1));
-	free(ptr2free);
-	return (stash);
-}
-
-char	*_free_and_return(char *to_free, char *to_return)
-{
-	free(to_free);
-	return (to_return);
-}
-
-char	*_handler(char *stash, int fd)
-{
-	char	*buff;
-	ssize_t	read_sig;
-
-	if (!stash)
-	{
-		stash = ft_strjoin("", "");
-		if (!stash)
-			return (NULL);
-	}
-	buff = malloc(BUFFER_SIZE + 1);
-	if (!buff)
-		return (NULL);
-	buff[BUFFER_SIZE] = 0;
-	while (!_contains_nl(stash))
-	{
-		read_sig = read(fd, buff, BUFFER_SIZE);
-		if (read_sig <= 0)
-			break ;
-		while (read_sig < BUFFER_SIZE)
-			buff[read_sig++] = 0;
-		stash = _free_and_return(stash, ft_strjoin(stash, buff));
-	}
-	return (_free_and_return(buff, stash));
-}
-
 char	*get_next_line(int fd)
 {
-	static char	*stash;
-	char		*str2ret;
+	static char		buff[BUFFER_SIZE + 1];
+	char			*acc_str;
+	ssize_t			read_sig;
 
-	stash = _handler(stash, fd);
-	if (!ft_strlen(stash))
+	acc_str = ft_strjoin(buff, "");
+	if (!acc_str)
+		return (NULL);
+	while (!ft_got_line(acc_str))
 	{
-		stash = _free_and_return(stash, NULL);
-		return (stash);
+		read_sig = 0;
+		while (read_sig < BUFFER_SIZE + 1)
+			buff[read_sig++] = 0;
+		read_sig = read(fd, buff, BUFFER_SIZE);
+		if (read_sig < 0 || (!ft_strlen(buff) && !ft_strlen(acc_str)))
+			return (ft_free_n_return(&acc_str, NULL));
+		if (!read_sig)
+			return (ft_free_n_return(&acc_str, ft_strjoin(acc_str, buff)));
+		acc_str = ft_free_n_return(&acc_str, ft_strjoin(acc_str, buff));
+		if (!acc_str)
+			return (NULL);
 	}
-	if (!_contains_nl(stash))
-	{
-		str2ret = _free_and_return(stash, ft_strjoin("", stash));
-		stash = NULL;
-		return (str2ret);
-	}
-	str2ret = _get_line(stash, 1);
-	stash = _get_line(stash, 0);
-	return (str2ret);
+	return (ft_get_line(acc_str, &buff));
 }
